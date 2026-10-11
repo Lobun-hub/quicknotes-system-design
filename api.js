@@ -7,6 +7,7 @@ const noteForm = document.querySelector("#note-form");
 const titleInput = document.querySelector("#title-input");
 const bodyInput = document.querySelector("#body-input");
 const submitButton = document.querySelector("#submit-btn");
+const exampleButtons = document.querySelectorAll(".use-example");
 let notes = [];
 
 function setStatus(message, kind = "") {
@@ -18,6 +19,9 @@ function setRequestState(isRunning) {
   loadButton.disabled = isRunning;
   submitButton.disabled = isRunning;
   notesList.querySelectorAll("button").forEach((button) => {
+    button.disabled = isRunning;
+  });
+  exampleButtons.forEach((button) => {
     button.disabled = isRunning;
   });
 }
@@ -137,3 +141,11 @@ async function createNote(event) {
 
 loadButton.addEventListener("click", loadNotes);
 noteForm.addEventListener("submit", createNote);
+exampleButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    titleInput.value = button.dataset.title;
+    bodyInput.value = button.dataset.body;
+    setStatus("Example ready. You can edit it before creating.", "success");
+    titleInput.focus();
+  });
+});
