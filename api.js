@@ -7,6 +7,7 @@ const noteForm = document.querySelector("#note-form");
 const titleInput = document.querySelector("#title-input");
 const bodyInput = document.querySelector("#body-input");
 const submitButton = document.querySelector("#submit-btn");
+let notes = [];
 
 function setStatus(message, kind = "") {
   statusMessage.textContent = message;
@@ -57,7 +58,8 @@ async function loadNotes() {
   setStatus("Loading notes...");
 
   try {
-    const { data: notes } = await request(`${API_URL}?_limit=10`);
+    const result = await request(`${API_URL}?_limit=10`);
+    notes = result.data;
     renderNotes(notes);
     setStatus(`Loaded ${notes.length} notes from the server.`, "success");
   } catch (error) {
@@ -67,4 +69,48 @@ async function loadNotes() {
   }
 }
 
+async function createNote(event) {
+  event.preventDefault();
+
+  const title = titleInput.value.trim();
+  if (!title) {
+    setStatus("Please enter a title for your note.", "error");
+    titleInput.focus();
+    return;
+  }
+  if (title.length > 100) {
+    setStatus("The title must be 100 characters or fewer.", "error");
+    titleInput.focus();
+    return;
+  }
+
+  setRequestState(true);
+  setStatus("Creating note...");
+  try {
+    const result = await request(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json; charset=UTF-8" },
+      body: JSON.stringify({
+        title,
+        body: bodyInput.value.trim(),
+        userId: 1,
+      }),
+    });
+
+    // JSONPlaceholder returns a simulated note; retain it in this page's state.
+    notes = [result.data, ...notes];
+    renderNotes(notes);
+    noteForm.reset();
+    setStatus(
+      `Note created (status ${result.status}, id ${result.data.id}).`,
+      "success",
+    );
+  } catch (error) {
+    setStatus(`Could not create note. ${error.message}`, "error");
+  } finally {
+    setRequestState(false);
+  }
+}
+
 loadButton.addEventListener("click", loadNotes);
+noteForm.addEventListener("submit", createNote);
