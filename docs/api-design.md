@@ -12,13 +12,14 @@ return at most 100 items per page.
 
 | Method | Path | Description | Success status |
 | --- | --- | --- | --- |
+| `POST` | `/v1/users` | Register a user account. | `201 Created` |
 | `POST` | `/v1/auth/token` | Exchange valid credentials for an access token. | `200 OK` |
 | `GET` | `/v1/notes` | List the authenticated user's notes; supports `limit` and `cursor`. | `200 OK` |
 | `POST` | `/v1/notes` | Create a note for the authenticated user. | `201 Created` |
 | `GET` | `/v1/notes/{noteId}` | Retrieve one of the authenticated user's notes. | `200 OK` |
 | `PATCH` | `/v1/notes/{noteId}` | Update the supplied title and/or body fields. | `200 OK` |
 | `DELETE` | `/v1/notes/{noteId}` | Delete one of the authenticated user's notes. | `204 No Content` |
-| `GET` | `/v1/tags` | List tags owned by or shared with the authenticated user. | `200 OK` |
+| `GET` | `/v1/tags` | List tags owned by the authenticated user. | `200 OK` |
 | `PUT` | `/v1/notes/{noteId}/tags/{tagId}` | Associate an existing tag with a note. | `204 No Content` |
 | `DELETE` | `/v1/notes/{noteId}/tags/{tagId}` | Remove a tag association from a note. | `204 No Content` |
 
