@@ -1,4 +1,5 @@
 const API_URL = "https://jsonplaceholder.typicode.com/posts";
+const SAVED_NOTES_KEY = "quicknotes.savedNotes";
 
 const loadButton = document.querySelector("#load-btn");
 const statusMessage = document.querySelector("#status");
@@ -34,6 +35,32 @@ async function request(url, options = {}) {
   return { data: await response.json(), status: response.status };
 }
 
+function getSavedNotes() {
+  const savedNotes = localStorage.getItem(SAVED_NOTES_KEY);
+  if (!savedNotes) {
+    return [];
+  }
+
+  const parsedNotes = JSON.parse(savedNotes);
+  if (
+    !Array.isArray(parsedNotes) ||
+    !parsedNotes.every(
+      (note) =>
+        note &&
+        typeof note.id === "string" &&
+        typeof note.title === "string" &&
+        typeof note.body === "string",
+    )
+  ) {
+    throw new Error("Saved notes are invalid. Clear this browser's QuickNotes data and try again.");
+  }
+  return parsedNotes;
+}
+
+function saveNotes(savedNotes) {
+  localStorage.setItem(SAVED_NOTES_KEY, JSON.stringify(savedNotes));
+}
+
 function renderNotes(notes) {
   notesList.replaceChildren();
 
@@ -67,9 +94,19 @@ async function loadNotes() {
 
   try {
     const result = await request(`${API_URL}?_limit=10`);
-    notes = result.data;
+    const savedNotes = getSavedNotes();
+    const serverNotes = result.data.filter(
+      (serverNote) => !savedNotes.some((savedNote) => savedNote.serverId === serverNote.id),
+    );
+    notes = [...savedNotes, ...serverNotes];
     renderNotes(notes);
-    setStatus(`Loaded ${notes.length} notes from the server.`, "success");
+    const savedMessage = savedNotes.length
+      ? ` and ${savedNotes.length} saved in this browser`
+      : "";
+    setStatus(
+      `Loaded ${serverNotes.length} notes from the server${savedMessage}.`,
+      "success",
+    );
   } catch (error) {
     setStatus(`Could not load notes. ${error.message}`, "error");
   } finally {
@@ -81,12 +118,15 @@ async function deleteNote(id) {
   setRequestState(true);
   setStatus("Deleting note...");
   try {
-    const result = await request(`${API_URL}/${encodeURIComponent(id)}`, {
+    const note = notes.find((currentNote) => currentNote.id === id);
+    const serverId = note?.serverId ?? id;
+    const result = await request(`${API_URL}/${encodeURIComponent(serverId)}`, {
       method: "DELETE",
     });
 
     // JSONPlaceholder confirms DELETE but does not persist it; update this page's list.
     notes = notes.filter((note) => note.id !== id);
+    saveNotes(getSavedNotes().filter((savedNote) => savedNote.id !== id));
     renderNotes(notes);
     setStatus(`Note deleted (status ${result.status}).`, "success");
   } catch (error) {
@@ -124,8 +164,15 @@ async function createNote(event) {
       }),
     });
 
-    // JSONPlaceholder returns a simulated note; retain it in this page's state.
-    notes = [result.data, ...notes];
+    // JSONPlaceholder simulates writes, so keep created notes in browser storage.
+    const savedNote = {
+      ...result.data,
+      id: `local-${Date.now()}-${crypto.randomUUID()}`,
+      serverId: result.data.id,
+    };
+    const savedNotes = [...getSavedNotes(), savedNote];
+    saveNotes(savedNotes);
+    notes = [savedNote, ...notes];
     renderNotes(notes);
     noteForm.reset();
     setStatus(
@@ -141,6 +188,12 @@ async function createNote(event) {
 
 loadButton.addEventListener("click", loadNotes);
 noteForm.addEventListener("submit", createNote);
+try {
+  notes = getSavedNotes();
+  renderNotes(notes);
+} catch (error) {
+  setStatus(`Could not read saved notes. ${error.message}`, "error");
+}
 exampleButtons.forEach((button) => {
   button.addEventListener("click", () => {
     titleInput.value = button.dataset.title;

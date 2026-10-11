@@ -16,8 +16,10 @@ documents for a real notes service intended to scale to one million users.
 3. Open <http://localhost:8000> in a browser and choose **Load notes**.
    Creating and deleting notes sends POST and DELETE requests to
    JSONPlaceholder; those writes are simulated by the practice API and are not
-   persisted on its server. The client updates its local page state for the
-   current session.
+   persisted on its server. Notes you create are saved in this browser's
+   `localStorage`, so they remain available after refreshing and are shown again
+   when you load server notes. Browser-saved notes are local to this browser
+   profile and do not sync to other devices.
 
 The client uses the public JSONPlaceholder endpoint and therefore needs an
 internet connection. No backend service or package installation is required.
