@@ -45,10 +45,14 @@ function renderNotes(notes) {
     const item = document.createElement("li");
     const title = document.createElement("h3");
     const body = document.createElement("p");
+    const deleteButton = document.createElement("button");
 
     title.textContent = note.title;
     body.textContent = note.body || "";
-    item.append(title, body);
+    deleteButton.type = "button";
+    deleteButton.textContent = "Delete";
+    deleteButton.addEventListener("click", () => deleteNote(note.id));
+    item.append(title, body, deleteButton);
     notesList.append(item);
   });
 }
@@ -64,6 +68,25 @@ async function loadNotes() {
     setStatus(`Loaded ${notes.length} notes from the server.`, "success");
   } catch (error) {
     setStatus(`Could not load notes. ${error.message}`, "error");
+  } finally {
+    setRequestState(false);
+  }
+}
+
+async function deleteNote(id) {
+  setRequestState(true);
+  setStatus("Deleting note...");
+  try {
+    const result = await request(`${API_URL}/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+
+    // JSONPlaceholder confirms DELETE but does not persist it; update this page's list.
+    notes = notes.filter((note) => note.id !== id);
+    renderNotes(notes);
+    setStatus(`Note deleted (status ${result.status}).`, "success");
+  } catch (error) {
+    setStatus(`Could not delete note. ${error.message}`, "error");
   } finally {
     setRequestState(false);
   }
