@@ -19,7 +19,10 @@ documents for a real notes service intended to scale to one million users.
    persisted on its server. Notes you create are saved in this browser's
    `localStorage`, so they remain available after refreshing and are shown again
    when you load server notes. Browser-saved notes are local to this browser
-   profile and do not sync to other devices.
+   profile and do not sync to other devices. Deleting a server-provided practice
+   note hides it in this browser; JSONPlaceholder does not delete it from its
+   server. The production API's database deletion and cascading tag-reference
+   cleanup are described in the design documents.
 
 The client uses the public JSONPlaceholder endpoint and therefore needs an
 internet connection. No backend service or package installation is required.

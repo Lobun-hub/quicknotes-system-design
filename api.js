@@ -1,5 +1,6 @@
 const API_URL = "https://jsonplaceholder.typicode.com/posts";
 const SAVED_NOTES_KEY = "quicknotes.savedNotes";
+const DELETED_NOTES_KEY = "quicknotes.deletedServerNoteIds";
 
 const loadButton = document.querySelector("#load-btn");
 const statusMessage = document.querySelector("#status");
@@ -61,6 +62,28 @@ function saveNotes(savedNotes) {
   localStorage.setItem(SAVED_NOTES_KEY, JSON.stringify(savedNotes));
 }
 
+function getDeletedNoteIds() {
+  const deletedNoteIds = localStorage.getItem(DELETED_NOTES_KEY);
+  if (!deletedNoteIds) {
+    return [];
+  }
+
+  const parsedIds = JSON.parse(deletedNoteIds);
+  if (
+    !Array.isArray(parsedIds) ||
+    !parsedIds.every(
+      (id) => typeof id === "string" || typeof id === "number",
+    )
+  ) {
+    throw new Error("Deleted note records are invalid. Clear this browser's QuickNotes data and try again.");
+  }
+  return parsedIds;
+}
+
+function saveDeletedNoteIds(deletedNoteIds) {
+  localStorage.setItem(DELETED_NOTES_KEY, JSON.stringify(deletedNoteIds));
+}
+
 function renderNotes(notes) {
   notesList.replaceChildren();
 
@@ -95,16 +118,25 @@ async function loadNotes() {
   try {
     const result = await request(`${API_URL}?_limit=10`);
     const savedNotes = getSavedNotes();
+    const deletedNoteIds = getDeletedNoteIds();
     const serverNotes = result.data.filter(
-      (serverNote) => !savedNotes.some((savedNote) => savedNote.serverId === serverNote.id),
+      (serverNote) =>
+        !deletedNoteIds.includes(serverNote.id) &&
+        !savedNotes.some((savedNote) => savedNote.serverId === serverNote.id),
     );
     notes = [...savedNotes, ...serverNotes];
     renderNotes(notes);
+    const hiddenCount = result.data.filter((serverNote) =>
+      deletedNoteIds.includes(serverNote.id),
+    ).length;
+    const hiddenMessage = hiddenCount
+      ? `; hid ${hiddenCount} previously deleted practice note${hiddenCount === 1 ? "" : "s"} in this browser`
+      : "";
     const savedMessage = savedNotes.length
-      ? ` and ${savedNotes.length} saved in this browser`
+      ? `; ${savedNotes.length} saved in this browser`
       : "";
     setStatus(
-      `Loaded ${serverNotes.length} notes from the server${savedMessage}.`,
+      `Loaded ${serverNotes.length} notes from the server${hiddenMessage}${savedMessage}.`,
       "success",
     );
   } catch (error) {
@@ -125,8 +157,15 @@ async function deleteNote(id) {
     });
 
     // JSONPlaceholder confirms DELETE but does not persist it; update this page's list.
+    if (note?.serverId !== undefined) {
+      saveNotes(getSavedNotes().filter((savedNote) => savedNote.id !== id));
+    } else {
+      const deletedNoteIds = getDeletedNoteIds();
+      if (!deletedNoteIds.includes(serverId)) {
+        saveDeletedNoteIds([...deletedNoteIds, serverId]);
+      }
+    }
     notes = notes.filter((note) => note.id !== id);
-    saveNotes(getSavedNotes().filter((savedNote) => savedNote.id !== id));
     renderNotes(notes);
     setStatus(`Note deleted (status ${result.status}).`, "success");
   } catch (error) {
